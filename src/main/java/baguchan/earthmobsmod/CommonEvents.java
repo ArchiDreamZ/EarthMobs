@@ -1,17 +1,21 @@
 package baguchan.earthmobsmod;
 
 import baguchan.earthmobsmod.capability.ShadowCapability;
+import baguchan.earthmobsmod.entity.ZombifiedPig;
 import baguchan.earthmobsmod.registry.ModBlocks;
+import baguchan.earthmobsmod.registry.ModEntities;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.animal.Pig;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ShearsItem;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent;
 import net.minecraftforge.event.AttachCapabilitiesEvent;
+import net.minecraftforge.event.entity.EntityStruckByLightningEvent;
 import net.minecraftforge.event.entity.living.LivingEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
@@ -53,6 +57,30 @@ public class CommonEvents {
 		event.getEntityLiving().getCapability(EarthMobsMod.SHADOW_CAP).ifPresent(shadowCapability -> {
 			shadowCapability.tick(event.getEntityLiving());
 		});
+	}
+
+	@SubscribeEvent
+	public static void onLightning(EntityStruckByLightningEvent event) {
+		if (event.getEntity() instanceof Pig pig) {
+			if (event.getEntity().getType() != ModEntities.ZOMBIFIED_PIG.get()) {
+				ZombifiedPig zombifiedpig = ModEntities.ZOMBIFIED_PIG.get().create(event.getEntity().getLevel());
+				zombifiedpig.moveTo(pig.getX(), pig.getY(), pig.getZ(), pig.getYRot(), pig.getXRot());
+				zombifiedpig.setNoAi(pig.isNoAi());
+				zombifiedpig.setBaby(pig.isBaby());
+				if (pig.hasCustomName()) {
+					zombifiedpig.setCustomName(pig.getCustomName());
+					zombifiedpig.setCustomNameVisible(pig.isCustomNameVisible());
+				}
+
+				zombifiedpig.setPersistenceRequired();
+				net.minecraftforge.event.ForgeEventFactory.onLivingConvert(pig, zombifiedpig);
+				event.getEntity().getLevel().addFreshEntity(zombifiedpig);
+				pig.discard();
+				event.setCanceled(true);
+			} else {
+				event.setCanceled(true);
+			}
+		}
 	}
 
 	@SubscribeEvent
